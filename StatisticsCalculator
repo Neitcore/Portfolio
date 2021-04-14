@@ -1,0 +1,443 @@
+from tkinter import *
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from numpy import quantile, median, std
+master = Tk()
+class StatisticsCalculator(Frame):
+      def __init__(self):
+            Frame.__init__(self)
+            self.grid()
+
+            self.plotting = False
+            
+            self.configure(background ='#ffc0cb')
+
+            self.entry_array = StringVar()
+
+            self.counter = 0
+            
+            self.enterArray= Entry(self, textvariable= self.entry_array, background='#ffc0cb')
+            self.enterArray.grid(row = 0, column = 1)
+
+            self.display= Label(self, text='Данные через пробел: ', background='#ffc0cb')
+            self.display.grid(row = 0, column = 0)
+            
+            self.solve_button= Button(self, text='Посчитать все', command= self.solve, background='#ffc0cb')
+            self.solve_button.grid(row = 1, column = 0)
+
+            self.error_message = Label(self, text = '', background='#ffc0cb')
+            self.error_message.grid(row = 1, column = 1)
+
+      def calculate_sample_size(self, num_array):
+            self.size = len(num_array)
+            return self.size
+      
+      def calculate_variation_series(self, num_array):
+            return set(num_array)
+  
+      def calculate_frequency_distribution(self,num_array):
+
+            num_array = sorted(num_array)
+            self.maxnum = -1e100
+            self.dicted_nums = {}
+
+            for self.num in num_array:
+                  self.dicted_nums[self.num] = 0
+            for self.num in num_array:
+                  self.dicted_nums[self.num] += 1
+
+            return self.dicted_nums            
+
+      def sort_array(self,num_array):
+            return sorted(num_array)
+
+      def frequency_distribution_poligon(self,distribution):
+            fig, ax = plt.subplots(1, 1, constrained_layout=True)
+            ax.set_title("Полигон частотных распределений")
+            ax.plot(distribution.keys(),distribution.values(),'-o')
+            
+      def relative_frequency_distribution(self,distribution):
+                        
+            self.relative_frequency_distribution_list = []
+            self.relative_frequency_distribution_dict = {}
+            
+            self.frequency_distribution_keys = distribution.keys()
+            for self.value in distribution.values():
+                  self.relative_frequency_distribution_list.append(round(self.value/sum(distribution.values()),3))
+            self.i = 0
+            for self.key in self.frequency_distribution_keys:
+                  self.relative_frequency_distribution_dict[self.key] = self.relative_frequency_distribution_list[self.i]
+                  self.i+=1
+
+            return self.relative_frequency_distribution_dict
+      
+      def relative_frequency_distribution_poligon(self,relative_distribution):
+            fig, ax = plt.subplots(1, 1, constrained_layout=True)
+            ax.set_title("Полигон релативных частотных распределений")
+            ax.plot(relative_distribution.keys(),relative_distribution.values(),'-o')   
+            
+      def calculate_distribution_of_accumulated_frequencies(self, distribution):
+            self.accumulated_frequencies_dict = {}
+            self.accumulated_frequencies = []
+            self.accumulate = 0
+            
+            for self.i in distribution.values():
+                  self.accumulate += self.i
+                  self.accumulated_frequencies.append(self.accumulate)
+
+            self.i = 0
+            for self.key in distribution.keys():
+                  self.accumulated_frequencies_dict[self.key] = self.accumulated_frequencies[self.i]
+                  self.i+=1
+            return self.accumulated_frequencies_dict
+      
+      def distribution_of_accumulated_frequencies_kumulat(self, accumulated_distibution):
+            fig, ax = plt.subplots(1, 1, constrained_layout=True)
+            ax.set_title("Камулат накопленных частотных распределений")
+            ax.plot(accumulated_distibution.keys(),accumulated_distibution.values(),'-o')
+            
+      def calculate_relative_distribution_of_accumulated_frequencies(self,accumulated_distibution):
+            self.accumulated_distibution_values = []
+            self.relative_accumulated_distribution_list = []
+            self.relative_accumulated_distribution_dict = {}
+            for self.value in accumulated_distibution.values():
+                  self.accumulated_distibution_values.append(self.value)
+            self.n = self.accumulated_distibution_values[-1]
+
+            for self.value in self.accumulated_distibution_values:
+                  self.relative_accumulated_distribution_list.append(round(self.value/self.n*100,3))
+
+            self.i = 0
+            for self.key in accumulated_distibution.keys():
+                  self.relative_accumulated_distribution_dict[self.key] = self.relative_accumulated_distribution_list[self.i]
+                  self.i+=1
+
+            return self.relative_accumulated_distribution_dict
+      
+      def relative_distribution_of_accumulated_frequencies_kumulat(self, relative_accumulated_distibution):
+            fig, ax = plt.subplots(1, 1, constrained_layout=True)
+            ax.set_title("Камулат релативного распределения накопленных частот")
+            ax.plot(relative_accumulated_distibution.keys(),relative_accumulated_distibution.values(),'-o')
+            
+      def calculate_series_amplitude(self,array):
+            self.array = sorted(array)
+            self.amplitude = max(self.array) - min(self.array)
+            return self.amplitude
+      
+      def calculate_group_interval_length(self,destribution):
+            self.amplitude = max(destribution.keys()) - min(destribution.keys())
+            
+            self.group_interval_length = self.amplitude+1
+            return self.group_interval_length
+      
+      def calculate_group_intervals(self,group_interval_length):
+            self.group_interval = group_interval_length/10
+            if group_interval_length < 6:
+                  self.group_interval = 1
+            return round(self.group_interval)
+
+      def group_by_interval(self,distribution,group_interval_length,group_interval):
+            self.grouped = {}
+            self.groups = []
+            self.step = group_interval
+            self.curr_step = 0
+            self.max_value = max(distribution)
+            
+            
+            self.groups.append("<" + str(self.step))
+            self.curr_step = self.step
+            
+            for i in range(1,self.max_value+1):
+                  if self.curr_step+self.step < self.max_value+self.step+1:
+                        self.groups.append(str(self.curr_step) + "-" + str(self.curr_step+self.step))
+                        self.curr_step += self.step
+                        
+            for self.key in self.groups:
+                  self.grouped[self.key] = 0
+                  
+            for self.key in distribution.keys():
+                  
+                  if self.key < self.step:
+                        
+                        self.grouped[self.groups[0]] += distribution[self.key]
+      
+            for self.element in self.groups:
+                  
+                  self.new_element = self.element.split("-")
+                  if len(self.new_element) > 1:
+                        l = int(self.new_element[0])
+                        r = int(self.new_element[1])
+                        for self.key in distribution.keys():
+                              if l <= self.key < r:
+                                    self.grouped[self.element] += distribution[self.key]
+            
+            return self.grouped
+
+      def frequency_histogram(self,groupes_by_interval):
+            x_hist = []
+            y_hist = []
+            for self.key in groupes_by_interval.keys():
+                  x_hist.append(self.key)
+                  
+            for self.value in groupes_by_interval.values():
+                  y_hist.append(self.value)
+             
+            fig, ax = plt.subplots(figsize=(16,10), facecolor='white', dpi= 80)
+            ax.vlines(x=x_hist, ymin=0, ymax=y_hist, color='firebrick', alpha=0.7, linewidth=20)
+            ax.set_title("Гистограмма частоты ")
+            
+      def relative_group_by_interval(self, groupes_by_interval):
+            n = sum(groupes_by_interval.values())
+            relative_groupes_by_interval_dict = {}
+            relative_groupes_by_interval_list = []
+            
+            for value in groupes_by_interval.values():
+                  relative_groupes_by_interval_list.append(value/n * 100)
+            i = 0
+            for key in groupes_by_interval:
+                  relative_groupes_by_interval_dict[key] = relative_groupes_by_interval_list[i]
+                  i+=1
+
+            return relative_groupes_by_interval_dict
+      
+      def relative_frequency_histogram(self,relative_grouped_by_interval):
+            x_hist = []
+            y_hist = []
+            for self.key in relative_grouped_by_interval.keys():
+                  x_hist.append(self.key)
+                  
+            for self.value in relative_grouped_by_interval.values():
+                  y_hist.append(self.value)
+             
+            fig, ax = plt.subplots(figsize=(16,10), facecolor='white', dpi= 80)
+            ax.vlines(x=x_hist, ymin=0, ymax=y_hist, color='firebrick', alpha=0.7, linewidth=20)
+            ax.set_title("Гистограмма релативной частоты ")
+
+      def calculate_quantiles(self, num_array):
+            num_array = sorted(num_array)
+            quantiles = quantile(num_array,[0.25, 0.50, 0.75])
+            self.quantile1  = quantiles[0]
+            self.quantile3 = quantiles[2]
+            return self.quantile1, self.quantile3
+      
+      def calculate_mode(self, num_array):
+            self.mode = []
+            self.max_num = -1e100
+            self.dicted_nums = {}
+
+            for self.num in num_array:
+                  self.dicted_nums[self.num] = 0
+            for self.num in num_array:
+                  self.dicted_nums[self.num] += 1
+            for self.num in num_array:
+                  if self.dicted_nums[self.num] > self.max_num:
+                        self.max_num = self.dicted_nums[self.num]
+            for self.num in self.dicted_nums:
+                  if self.dicted_nums[self.num] == self.max_num:
+                        self.mode.append(self.num)
+            return self.mode
+
+      def calculate_median(self,num_array):
+            self.median_array = sorted(num_array)
+            return median(self.median_array)
+
+
+      def calculate_average(self, num_array):
+            self.average = sum(num_array)/len(num_array)
+            return self.average
+      
+      def calculate_dispersion(self,num_array):
+            num_array = sorted(num_array)
+            return std(num_array)
+
+      
+      def calculate_standart_diviation(self, dispersion):
+            return dispersion**0.5
+
+      def ploting_func(self):
+            plt.show()
+
+      def solve(self):
+            self.array = self.entry_array.get().split()
+            self.counter += 1
+            self.array = [int(i) for i in self.array]
+            try:
+                  self.array[0]
+                  self.error_message["text"] = ""
+
+            except IndexError:
+                  if self.counter == 3:
+                        self.error_message["text"] = "Буп, ты лапка <3"
+                  else:
+                        self.error_message["text"] = "Не введены данные"
+                  
+                  return 0
+            
+            self.newWindow = Toplevel(master)
+            self.newWindow['background']='#ffc0cb'
+            
+            self.show_sample_size_message = Label(self.newWindow, text = 'Размер выборки:', background='#ffc0cb')
+            self.show_sample_size_message.grid()
+
+            self.sample_size = str(self.calculate_sample_size(self.array))
+            
+            self.show_sample_size = Label(self.newWindow, text = self.sample_size, background='#ffc0cb')
+            self.show_sample_size.grid()
+
+            self.show_variation_series_message = Label(self.newWindow, text = 'Вариационный ряд: ', background='#ffc0cb')
+            self.show_variation_series_message.grid()
+
+            self.variation_series = str(self.calculate_variation_series(self.array))
+
+            self.show_variation_series = Label(self.newWindow, text = self.variation_series, background='#ffc0cb')
+            self.show_variation_series.grid()
+
+            self.show_sort_array_message = Label(self.newWindow, text = 'Ранжированный ряд: ', background='#ffc0cb')
+            self.show_sort_array_message.grid()
+
+            self.sorted_array = str(self.sort_array(self.array))
+
+            self.show_sort_array = Label(self.newWindow, text = self.sorted_array, background='#ffc0cb')
+            self.show_sort_array.grid()
+            
+            self.show_distribution_message = Label(self.newWindow, text = 'Распределение: ', background='#ffc0cb')
+            self.show_distribution_message.grid()
+
+            self.distribution = self.calculate_frequency_distribution(self.array)
+            
+            self.show_distribution = Label(self.newWindow, text = self.distribution, background='#ffc0cb')
+            self.show_distribution.grid()
+
+            
+            self.show_relative_distribution_message = Label(self.newWindow, text = 'Релативное распределение: ', background='#ffc0cb')
+            self.show_relative_distribution_message.grid()
+            
+            self.relative_distribution = self.relative_frequency_distribution(self.distribution)
+
+            self.show_relative_distribution = Label(self.newWindow, text =  self.relative_distribution, background='#ffc0cb')
+            self.show_relative_distribution.grid()
+
+            self.show_accumulated_distibution_message = Label(self.newWindow, text =  "Накопленное распределение:", background='#ffc0cb')
+            self.show_accumulated_distibution_message.grid()
+            
+            self.accumulated_distibution = self.calculate_distribution_of_accumulated_frequencies(self.distribution)
+
+            self.show_accumulated_distibution = Label(self.newWindow, text =  self.accumulated_distibution, background='#ffc0cb')
+            self.show_accumulated_distibution.grid()
+
+            self.show_relative_accumulated_distibution_message = Label(self.newWindow, text =  "Релативное накопленное распределение:", background='#ffc0cb')
+            self.show_relative_accumulated_distibution_message.grid()
+            
+            self.relative_accumulated_distibution = self.calculate_relative_distribution_of_accumulated_frequencies(self.accumulated_distibution)
+
+            self.show_relative_accumulated_distibution = Label(self.newWindow, text =  self.relative_accumulated_distibution, background='#ffc0cb')
+            self.show_relative_accumulated_distibution.grid()
+
+
+            self.show_series_amplitude_message = Label(self.newWindow, text = "Амплитуда:", background='#ffc0cb')
+            self.show_series_amplitude_message.grid()
+
+            self.series_amplitude = self.calculate_series_amplitude(self.array)
+
+            self.show_series_amplitude = Label(self.newWindow, text = self.series_amplitude, background='#ffc0cb')
+            self.show_series_amplitude.grid()
+
+            self.show_group_interval_length_message = Label(self.newWindow, text = "Длинна интервала группы:", background='#ffc0cb')
+            self.show_group_interval_length_message.grid()
+            
+            self.group_interval_length = self.calculate_group_interval_length(self.distribution)
+
+            self.show_group_interval_length = Label(self.newWindow, text = self.group_interval_length, background='#ffc0cb')
+            self.show_group_interval_length.grid()
+
+            self.show_group_interval_message = Label(self.newWindow, text = "Интервалов по группам: ", background='#ffc0cb')
+            self.show_group_interval_message.grid()
+            
+            self.group_interval = self.calculate_group_intervals(self.group_interval_length)
+
+            self.show_group_interval= Label(self.newWindow, text = self.group_interval, background='#ffc0cb')
+            self.show_group_interval.grid()
+
+
+            self.show_groupes_by_interval_message = Label(self.newWindow, text = "Интервалы по группам: ", background='#ffc0cb')
+            self.show_groupes_by_interval_message.grid()
+            
+            self.groupes_by_interval = self.group_by_interval(self.distribution,self.group_interval_length,self.group_interval)
+
+            self.show_groupes_by_interval = Label(self.newWindow, text = self.groupes_by_interval, background='#ffc0cb')
+            self.show_groupes_by_interval.grid()
+
+
+            self.show_relative_grouped_by_interval_message = Label(self.newWindow, text = "Релативная группировка по интервалам:", background='#ffc0cb')
+            self.show_relative_grouped_by_interval_message.grid()
+
+            self.relative_grouped_by_interval = self.relative_group_by_interval(self.groupes_by_interval)
+
+            self.show_relative_grouped_by_interval = Label(self.newWindow, text = self.relative_grouped_by_interval, background='#ffc0cb')
+            self.show_relative_grouped_by_interval.grid()
+
+
+            self.show_quantiles_message = Label(self.newWindow, text = "Квартили:", background='#ffc0cb')
+            self.show_quantiles_message.grid()
+
+            self.quantiles = self.calculate_quantiles(self.array)
+
+            self.show_quantiles = Label(self.newWindow, text = self.quantiles, background='#ffc0cb')
+            self.show_quantiles.grid()
+
+            self.show_mode_message = Label(self.newWindow, text = "Мода:", background='#ffc0cb')
+            self.show_mode_message.grid()
+            
+            self.mode_for_show = self.calculate_mode(self.array)
+
+            self.show_mode = Label(self.newWindow, text = self.mode_for_show, background='#ffc0cb')
+            self.show_mode.grid()
+            
+            self.show_median_message = Label(self.newWindow, text = "Медиана:", background='#ffc0cb')
+            self.show_median_message.grid()
+            
+            self.median = self.calculate_median(self.array)
+
+            self.show_median = Label(self.newWindow, text = self.median, background='#ffc0cb')
+            self.show_median.grid()
+            
+            self.show_average_message = Label(self.newWindow, text = "Среднее значение:", background='#ffc0cb')
+            self.show_average_message.grid()
+
+            self.average = self.calculate_average(self.array)
+
+            self.show_average = Label(self.newWindow, text = self.average, background='#ffc0cb')
+            self.show_average.grid()
+            
+            self.show_dispersion_message = Label(self.newWindow, text = "Дисперсия:", background='#ffc0cb')
+            self.show_dispersion_message.grid()
+            
+            self.dispersion = self.calculate_dispersion(self.array)
+
+            self.show_dispersion = Label(self.newWindow, text = self.dispersion, background='#ffc0cb')
+            self.show_dispersion.grid()
+            
+            self.show_standart_diviation_message = Label(self.newWindow, text = "Стандарное отклонение:", background='#ffc0cb')
+            self.show_standart_diviation_message.grid()
+
+            self.standart_diviation = self.calculate_standart_diviation(self.dispersion)
+
+            self.show_standart_diviation = Label(self.newWindow, text = self.standart_diviation, background='#ffc0cb')
+            self.show_standart_diviation.grid()
+
+            self.plotting_button = Button(self.newWindow, text='Показать графики', command= self.ploting_func, background='#ffc0cb')
+            self.plotting_button.grid()
+            #========================================================Graphs========================================================
+
+            self.frequency_distribution_poligon(self.distribution)
+            self.relative_frequency_distribution_poligon(self.relative_distribution)
+            self.distribution_of_accumulated_frequencies_kumulat(self.accumulated_distibution)
+            self.relative_distribution_of_accumulated_frequencies_kumulat(self.relative_accumulated_distibution)
+            self.frequency_histogram(self.groupes_by_interval)
+            self.relative_frequency_histogram(self.relative_grouped_by_interval)
+
+            
+def main():
+      StatisticsCalculator().mainloop()
+
+main()
