@@ -1,0 +1,771 @@
+#================================================================Imports==Globals==Settings==Variables======================================================================
+import pygame, time, sys, math, random
+global current_weapon, hitting, damaged, weapons, current_weapon, swipping, shoted_bullets,throwable_summons, prevMillis, explosions, hit, hurted,song_ended,SONG_END
+restart = False
+clock = pygame.time.Clock()
+pygame.init()
+pygame.mixer.init()
+black = 0, 0, 0
+pygame.display.init()
+DisplayInfo = pygame.display.Info()
+size = width, height = DisplayInfo.current_w, DisplayInfo.current_h
+sprite_size = sprite_width, sprite_height = 100, 100
+screen = pygame.display.set_mode(size)
+current_weapon = 0
+damaged = False
+hitting = False
+dead = False
+swipping = False
+shoted_bullets = []
+throwable_summons = []
+explosions = []
+hurted = []
+prevMillis = 0
+hit = 23
+myfont = pygame.font.Font("Fonts/Neon_Future.ttf", 50)
+myfont.set_bold(True)
+song_ended = False
+SONG_END = pygame.USEREVENT + 1
+
+def millis():
+        return int(round(time.time()*1000))
+#===================================================================Abstract==and==some==other==Classes=====================================================================
+    
+class GameObject(object):
+    def render(self):
+        if not self.dead:
+            screen.blit(self.img,(self.x-self.sprite_width//2,self.y-self.sprite_height//2))
+    def delete(self):
+        self.currMillis = millis()
+        #print(self.currMillis - self.prevMillis,self.interval)
+        if self.currMillis - self.prevMillis > self.interval:
+            self.dead = True
+            if self in shoted_bullets:
+                shoted_bullets.remove(self)
+                #print("removed")
+            if self in throwable_summons:
+                throwable_summons.remove(self)
+                #print("removed")
+                
+class GUI(GameObject):
+        def __init__(self):
+            self.show_fps = False
+            self.fps_label_x = width/20
+            self.fps_label_y = height/25
+            self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
+
+            self.show_menu = False
+
+            self.score_label_x, self.score_label_y = width/20,height/25
+            self.points = 0
+            
+            self.settings_icon_x = width - 150
+            self.settings_icon_y = 0 + 50
+            self.settings_icon = pygame.image.load("Sprites/Settings.png")
+            self.settings_icon = pygame.transform.scale(self.settings_icon, (100,100))
+
+            self.difficulty_menu = pygame.image.load("Sprites/difficulty_menu.png").convert()
+            self.dif_easy = pygame.image.load("Sprites/dif_easy.png").convert()
+            self.dif_normal = pygame.image.load("Sprites/dif_normal.png").convert()
+            self.dif_hard = pygame.image.load("Sprites/dif_hard.png").convert()
+            
+            self.difficulty_menu = pygame.transform.scale(self.difficulty_menu, (width//3,height-100))
+
+            self.dif_easy_x,self.dif_easy_y = width//2-self.difficulty_menu.get_width()//2+self.difficulty_menu.get_width()//6,\
+                                              height//2-self.difficulty_menu.get_height()//2+200
+            self.dif_normal_x, self.dif_normal_y = width//2-self.difficulty_menu.get_width()//2+self.difficulty_menu.get_width()//6,\
+                                                   height//2-self.difficulty_menu.get_height()//2+400
+            self.dif_hard_x,self.dif_hard_y = width//2-self.difficulty_menu.get_width()//2+self.difficulty_menu.get_width()//6,\
+                                              height//2-self.difficulty_menu.get_height()//2+600
+            
+        def get_score(self):
+            self.score_label = myfont.render("Score: "+str(self.points),1,(255,255,0))
+            
+        def get_fps_gui(self):
+            self.fps_label = myfont.render(str(round(clock.get_fps())) + " FPS",1,(0,255,0))
+            
+        
+        def settings(self):
+            
+            if self.isClicked_settings():
+                self.show_menu= not self.show_menu
+
+                
+
+        def isClicked_settings(self):
+                        self.isClickedDiff()
+                        self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
+                        return(((self.mouse_x >= self.settings_icon_x and self.mouse_x <= self.settings_icon_x+100)\
+                           and (self.mouse_y >= self.settings_icon_y and self.mouse_y <= self.settings_icon_y+100)))
+                    
+                    
+        def isClickedDiff(self):
+            if self.show_menu:
+                mouse_x,mouse_y = pygame.mouse.get_pos()
+                if((self.mouse_x >= self.dif_easy_x and self.mouse_x <= self.dif_easy_x+self.dif_easy.get_width())\
+                   and (self.mouse_y >= self.dif_easy_y and self.mouse_y <= self.dif_easy_y+self.dif_easy.get_height())):
+                    ragdoll.speed = 20
+                    ragdoll.diff = 99
+                if((self.mouse_x >= self.dif_normal_x and self.mouse_x <= self.dif_normal_x+self.dif_easy.get_width())\
+                   and (self.mouse_y >= self.dif_normal_y and self.mouse_y <= self.dif_normal_y+self.dif_normal.get_height())):
+                    ragdoll.speed = 50
+                    ragdoll.diff = 90
+                if((self.mouse_x >= self.dif_hard_x and self.mouse_x <= self.dif_hard_x+self.dif_hard.get_width())\
+                   and (self.mouse_y >= self.dif_hard_y and self.mouse_y <= self.dif_hard_y+self.dif_hard.get_height())):
+                    ragdoll.speed = 100
+                    ragdoll.diff = 70
+                           
+            
+        def render(self):
+            screen.blit(self.score_label, (self.score_label_x, self.score_label_y))
+            if self.show_fps:
+                screen.blit(self.fps_label, (self.fps_label_x, self.fps_label_y))
+                
+            if self.show_menu:
+                screen.blit(self.difficulty_menu, (width//2-self.difficulty_menu.get_width()//2, height//2-self.difficulty_menu.get_height()//2))
+                
+                screen.blit(self.dif_easy, (self.dif_easy_x, self.dif_easy_y))
+                screen.blit(self.dif_normal, (self.dif_normal_x, self.dif_normal_y))
+                screen.blit(self.dif_hard, (self.dif_hard_x, self.dif_hard_y))
+                
+            screen.blit(self.settings_icon, (self.settings_icon_x, self.settings_icon_y))            
+        
+        
+class Background(GameObject):
+    def __init__(self):
+        self.dead = False
+        self.x = width//2
+        self.y = height//2
+        self.img = pygame.image.load("Background/Classroom.jpg").convert()
+        self.img = pygame.transform.scale(self.img, (width,height))
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+
+class Bullet(GameObject):
+    def __init__(self,x,y,angle):
+        self.dead = False
+        self.x = x
+        self.y = y-20
+        self.angle = angle
+        self.img = pygame.image.load("Sprites/Bullet.png").convert_alpha()
+        self.img_normal = self.img
+        self.img_flipped = pygame.transform.flip(self.img, True, False)
+
+        
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+
+        if self.x > ragdoll.x+ragdoll.sprite_width//2 :
+            self.angle = -self.angle
+            self.img = pygame.transform.rotate(self.img_flipped, self.angle)
+        else:
+            self.img = pygame.transform.rotate(self.img_normal, self.angle)
+        self.point1 = ragdoll.get_center()
+
+        self.point2 = pistol.get_center()
+
+        self.vector = self.point1[0] - self.point2[0], self.point1[1] - self.point2[1]
+
+        self.mod_vector = (self.vector[0]**2 + self.vector[1]**2)**0.5
+
+        self.norm_vector = self.vector[0]/self.mod_vector, self.vector[1]/self.mod_vector
+
+        self.dir_x = self.norm_vector[0]
+        self.dir_y = self.norm_vector[1]
+        
+        self.speed_x = self.dir_x * 200
+        self.speed_y = self.dir_y * 200
+        
+    def move(self): 
+        self.x += self.speed_x    
+        self.y += self.speed_y
+
+    def is_collided_with(self, sprite):
+        if not self.dead:
+            sprite_rect = sprite.img.get_rect()
+            sprite_rect = sprite_rect.move(sprite.x,sprite.y)
+            self_rect = self.img.get_rect()
+            self_rect = self_rect.move(self.x,self.y)
+            return self_rect.colliderect(sprite_rect)
+        
+        
+class Weapon(GameObject):
+    global weapons,current_weapon
+    
+    def drag(self):
+        self.x, self.y = pygame.mouse.get_pos()
+        
+    def throw(self):
+        global throwable_summons
+        throw_weapon = ThrowableWeapon(self.img,self.x,self.y,self.type)
+        throwable_summons.append(throw_weapon)
+    
+    def is_collided_with(self, sprite):
+        if not self.dead:
+            sprite_rect = sprite.img.get_rect()
+            sprite_rect = sprite_rect.move(sprite.x,sprite.y)
+            self_rect = self.img.get_rect()
+            self_rect = self_rect.move(self.x,self.y)
+            return self_rect.colliderect(sprite_rect)
+        
+    def check_orination(self):
+        if self.x > ragdoll.x+ragdoll.sprite_width//2:
+            self.img = self.img_flipped
+        else:
+            self.img = self.img_normal
+
+class ThrowableWeapon(GameObject):
+    def __init__(self, img,x,y, type_of_throwable):
+        self.dead = False
+        self.used = False
+        self.img = img
+        self.x = x
+        self.y = y
+        self.type = type_of_throwable
+        self.speed_x = 50
+        if self.x > ragdoll.x:
+            self.speed_x = -self.speed_x
+        self.speed_y = 1
+        self.rotating_speed = 30
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+        self.currMillis = millis()
+        self.prevMillis = self.currMillis
+        self.interval = 1400
+        self.grenade_interval = 1500
+        self.img_id = 1
+        self.correction = 25
+        self.collidable = True
+        self.rand_point = (random.randint(ragdoll.x-ragdoll.sprite_width,ragdoll.x+ragdoll.sprite_width),random.randint(ragdoll.y-ragdoll.sprite_height,ragdoll.y+ragdoll.sprite_height))
+
+    def fall(self):
+        self.speed_y += 9.8
+        self.y += self.speed_y
+        if self.y > ragdoll.get_center()[1]+ragdoll.sprite_height//2-self.correction:
+            self.y = ragdoll.get_center()[1]+ragdoll.sprite_height//2-self.correction
+
+    def parabolic_fall(self):
+        self.x += self.speed_x
+        self.speed_y += 9.8
+        self.y += self.speed_y
+        if self.y > ragdoll.y+ragdoll.sprite_height-self.correction:
+            self.y = ragdoll.y+ragdoll.sprite_height-self.correction
+            self.speed_x = 0
+            
+    def animation(self):
+        if self.img_id <= 2:
+            self.img = pygame.image.load("Sprites/Shuriken_Anim/Shuriken0"+str(self.img_id)+".png")
+            self.img = pygame.transform.scale(self.img, (self.sprite_width,self.sprite_height))
+            self.img_id += 1
+        else: 
+            self.img_id = 1
+
+    def explode(self):
+        self.currMillis = millis()
+        if not self.dead:
+            if self.currMillis - self.prevMillis > self.grenade_interval:
+                self.dead = True
+                explosions.append(Explode(self.x-self.sprite_width-10,self.y-self.sprite_height-10))
+                
+    def is_collided_with(self, sprite):
+        if not self.dead:
+            sprite_rect = sprite.img.get_rect()
+            sprite_rect = sprite_rect.move(sprite.x,sprite.y)
+            self_rect = self.img.get_rect()
+            self_rect = self_rect.move(self.x,self.y)
+            return self_rect.colliderect(sprite_rect)
+
+
+class Explode(GameObject):
+    global explosions
+    def __init__(self, x, y):
+        self.img = pygame.image.load("Sprites/Explosive/expl_02_0000.png")
+        self.dead = False
+        self.x = x
+        self.y = y
+        self.img_id = 0
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+    def animation(self):
+        if self.img_id <= 23:
+            self.img = pygame.image.load("Sprites/Explosive/expl_02_00" + str(self.img_id).rjust(2, '0') +".png")
+            self.img = pygame.transform.scale(self.img,(200,200))
+            self.img_id += 1
+        else:
+            explosions.remove(self)
+            self.dead = True
+
+            
+    def is_collided_with(self, sprite):
+        if not self.dead:
+            sprite_rect = sprite.img.get_rect()
+            sprite_rect = sprite_rect.move(sprite.x,sprite.y)
+            self_rect = self.img.get_rect()
+            self_rect = self_rect.move(self.x,self.y)
+            return self_rect.colliderect(sprite_rect)
+
+class Music:
+    def __init__(self,song):
+        self.song = song
+        pygame.mixer.music.load(self.song)
+        pygame.mixer.music.play()
+
+    def play_music(self,song):
+        self.song = song
+        global song_ended
+        if song_ended == True:
+            pygame.mixer.music.load(self.song)
+            pygame.mixer.music.play()
+            song_ended = False
+            
+    def stop_music(self):
+        song_ended = True
+        pygame.mixer.music.stop()
+        
+#===========================================================================RAGDOLL==Classes================================================================================
+
+class Ragdoll(GameObject):
+    def __init__(self):
+        self.dead = False
+        self.orientation = 1
+        self.img = pygame.image.load("Characters/Idle_Vova.png").convert_alpha()
+        self.running = True
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+        self.img = pygame.transform.scale(self.img, (self.sprite_width//2,self.sprite_height//2)).convert_alpha()
+        self.img = pygame.transform.flip(self.img, True, False).convert_alpha()
+        self.img_normal = self.img
+        self.img_flipped = pygame.transform.flip(self.img, True, False)
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+        self.speed = 20
+        self.img_id = 1
+        self.run_flag = True
+        #print(self.sprite_width,self.sprite_height, "Ragdoll")
+        self.x, self.y = self.sprite_width//2 + 400, self.sprite_height//2 + 500
+        self.diff = 99
+        
+    def hurt(self):
+        global hurted
+        self.hitted_ragdoll = HittedRagdoll(self.x,self.y,self.orientation,self.sprite_width,self.sprite_height)
+        hurted.append(self.hitted_ragdoll)
+
+    def get_center(self):
+        return(self.x+self.sprite_width//2,self.y+self.sprite_height//2)
+        
+    def run(self):
+        if self.running and not self.dead:
+            if random.randint(1,100) > self.diff:
+                self.orientation = -self.orientation
+                self.img = pygame.transform.flip(self.img, True, False)
+                
+            if self.x < width-self.sprite_width and self.x > 0:
+                if self.orientation > 0:
+                    self.x += self.speed
+                else:
+                    self.x -= self.speed
+                    
+            else:
+                if self.x > width-self.sprite_width:
+                    self.x = width-self.sprite_width-1
+                elif self.x < 0:
+                    self.x = 0+1
+                    
+                self.orientation = -self.orientation
+                if self.orientation > 0:
+                    self.x += self.speed*2
+                else:
+                    self.x -= self.speed*2
+
+                
+            if self.img_id <= 10:
+                self.img = pygame.image.load("Characters/Run_Vova/Run_Vova"+str(self.img_id)+".png")
+                self.img = pygame.transform.scale(self.img, (self.sprite_width,self.sprite_height))
+                if self.orientation > 0:
+                    self.img = pygame.transform.flip(self.img, True, False)
+                self.img_id += 1
+            else:
+                self.img_id = 1
+       
+
+                
+    def render(self):
+        if not self.dead:
+            screen.blit(self.img,(self.x,self.y))
+        
+class HittedRagdoll(GameObject):
+    def __init__(self,x,y,orientation,sprite_width,sprite_height):
+        self.dead = False
+        self.x = x
+        self.y = y
+        self.orientation = orientation
+        self.sprite_width = sprite_width
+        self.sprite_height = sprite_height
+        self.img = pygame.image.load("Characters/Hit_Vova/hit_Vova_1.png")
+        self.img = pygame.transform.scale(self.img, (self.sprite_width,self.sprite_height))
+        #print(self.sprite_width,self.sprite_height, orientation, "Hitted")
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+        self.img_id = 1
+
+    def animation(self):
+        if self.img_id <= 10:
+            self.img = pygame.image.load("Characters/Hit_Vova/hit_Vova_"+str(self.img_id)+".png")
+            self.img = pygame.transform.scale(self.img, (self.sprite_width,self.sprite_height))
+            
+            if self.orientation == 1:
+                self.img = pygame.transform.flip(self.img, True, False)
+            else:
+                pass
+            
+            self.img_id += 1
+            if self.img_id > 10:
+                ragdoll.dead = False
+                if not ragdoll.running:
+                    ragdoll.running = True
+                
+                
+        else:
+            hitting = False
+            self.img_id = 1
+            self.dead = True
+            #hurted.remove(self)
+            
+    def render(self):
+        if not self.dead:
+            screen.blit(self.img,(self.x,self.y))
+
+#===========================================================================WEAPONS==Classes=================================================================================
+
+class Knife(Weapon):
+    global swipping
+    def __init__(self):
+        self.dead = False
+        self.swipping = False
+        self.iteration = 0
+        self.x = width//2
+        self.y = height//2
+        self.img = pygame.image.load("Sprites/Knife.png")
+        self.img = pygame.transform.scale(self.img, (sprite_width//2,sprite_height+50))
+        self.img_normal = self.img
+        self.img_flipped = pygame.transform.flip(self.img, True, False)
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+
+     
+    def swipe(self):
+        self.swipping = True
+        
+        if self.iteration <= 30:
+            self.img = pygame.transform.rotate(self.img,self.iteration)
+            self.x, self.y = pygame.mouse.get_pos()
+            self.iteration += 10
+        else:
+            self.swipping = False
+            self.iteration = 0
+            self.img = pygame.image.load("Sprites/Knife.png")
+            self.img = pygame.transform.scale(self.img, (sprite_width//2,sprite_height+50))
+            
+    
+
+class Pistol(Weapon):
+    def __init__(self):
+        self.dead = False
+        self.x = width//2
+        self.y = height//2
+        self.img = pygame.image.load("Sprites/Pistol.png")
+        self.img = pygame.transform.scale(self.img, (sprite_width+50,sprite_height))
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+        self.img_normal = self.img
+        self.img_flipped = pygame.transform.flip(self.img, True, False)
+        
+        
+
+    def looking_at(self):
+        
+        # This part is difficult as fuck. Just say that
+        # This shit calculates the vector to the ragdoll
+        # Using vectors theory
+
+        self.point1 = ragdoll.get_center() # ragdoll center
+        self.point2 = pistol.get_center() # gun center
+        self.point3 = (-1000,self.y)
+        self.point4 = (self.x,self.y-20)
+        pygame.draw.circle(screen, (0,0,255), self.point4, 5)
+        #pygame.draw.circle(screen, (255,0,0), self.point1, 5)
+        #pygame.draw.circle(screen, (0,255,0), self.point2, 5)
+        #pygame.draw.circle(screen, (0,0,255), self.point3, 5)
+        try:
+            self.vector1 = (abs(self.point1[0] - self.point2[0]), self.point1[1] - self.point2[1])
+            self.vector2 = (self.point3[0] - self.point2[0], self.point3[1] - self.point2[1])
+            self.ang = (self.vector2[0] * self.vector1[1] - self.vector2[1] * self.vector1[0])/((self.vector1[0]**2 + self.vector1[1]**2)**0.5 *(self.vector2[0]**2 + self.vector2[1]**2)**0.5 )
+            self.angle = math.degrees(math.asin(self.ang))    
+
+            
+            if self.point1[0] - self.point2[0] > 0 :
+                self.img = pygame.transform.rotate(self.img_normal, self.angle)
+            else:
+                self.img = pygame.transform.rotate(self.img_flipped, -self.angle)
+
+            self.sprite_width, self.sprite_height = self.img.get_rect().size
+            
+            
+        except ZeroDivisionError:
+            pass
+        
+    def get_center(self):
+        return self.x,self.y
+         
+    def shot(self):
+        global shoted_bullets
+        bullet = Bullet(self.x,self.y,self.angle)
+        shoted_bullets.append(bullet)
+        
+    
+    
+
+class NinjaStar(Weapon):
+    def __init__(self):
+        self.type = "star"
+        self.dead = False
+        self.x = width//2
+        self.y = height//2
+        self.img = pygame.image.load("Sprites/Shurken.png")
+        self.img = pygame.transform.scale(self.img, (sprite_width,sprite_height))
+        self.img_normal = self.img
+        self.img_flipped = pygame.transform.flip(self.img, True, False)
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+        self.rotating_speed = 30
+        self.currMillis = millis()
+        self.prevMillis = 0
+        self.interval = 1000
+        
+class Grenade(Weapon):
+    def __init__(self):
+        self.type = "grenade"
+        self.dead = False
+        self.x = width//2
+        self.y = height//2
+        self.img = pygame.image.load("Sprites/Grenade1.png")
+        self.img = pygame.transform.scale(self.img, (sprite_width//2,sprite_height//2))
+        self.img_normal = self.img
+        self.img_flipped = pygame.transform.flip(self.img, True, False)
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+        self.intervall = 1000
+        self.currMillis = millis()
+        self.prevMillis = 0
+            
+    
+    def explode(self): 
+        if self.currMillis - self.prevMillis > self.interval:
+            self.dead = True
+
+class StickyGrenade(Grenade):
+    def __init__(self):
+        self.type = "grenade"
+        self.dead = False
+        self.x = width//2
+        self.y = height//2
+        self.img = pygame.image.load("Sprites/Grenade2.png")
+        self.img = pygame.transform.scale(self.img, (sprite_width//2,sprite_height//2))
+        self.img_normal = self.img
+        self.img_flipped = pygame.transform.flip(self.img, True, False)
+        self.sprite_width, self.sprite_height = self.img.get_rect().size
+            
+    
+    
+#=============================================================================Creating==Objects=============================================================================
+
+
+background = Background()
+gui = GUI()
+ragdoll = Ragdoll()
+knife = Knife()
+pistol = Pistol()
+ninja_star = NinjaStar()
+grenade = Grenade()
+sticky_grenade = StickyGrenade()
+weapons = [knife, pistol, ninja_star, grenade]
+musicplayer = Music("Music/main_theme.mp3")
+
+#=================================================================================Game======================================================================================
+
+def game():
+    main_theme_song = "Music/main_theme.mp3"
+    #musicplayer.play_music(main_theme_song)
+        
+    keys = pygame.key.get_pressed()
+    global current_weapon, hitting,hitted_ragdoll,swipping,prevMillis,hit
+    currMillis = millis()
+    interval = 500
+    for event in pygame.event.get():
+        
+        if event.type == SONG_END:
+            song_ended = True
+            
+        if event.type == pygame.QUIT or keys[pygame.K_ESCAPE]:
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            
+            if event.button == 4:
+                 current_weapon += 1
+                 if current_weapon > len(weapons)-1:
+                     current_weapon = 0
+            if event.button == 5:
+                current_weapon -= 1
+                if current_weapon < 0:
+                    current_weapon = len(weapons)-1
+            if event.button == 1:
+                gui.settings()
+                if currMillis - prevMillis > interval:
+                    prevMillis = currMillis
+                    if weapons[current_weapon] == knife:
+                        if weapons[current_weapon].is_collided_with(ragdoll):
+                            #ragdoll.hurt()
+                            hitted_ragdoll = HittedRagdoll(ragdoll.x,ragdoll.y,ragdoll.orientation,ragdoll.sprite_width,ragdoll.sprite_height)
+                            hitting = True
+                            ragdoll.dead = True
+                            weapons[current_weapon].swipping = True
+                            gui.points += int((20*99)/(ragdoll.diff-2))
+                            
+                    if weapons[current_weapon] == pistol:
+                        weapons[current_weapon].shot()
+                        
+                    if weapons[current_weapon] == grenade or weapons[current_weapon] == sticky_grenade or weapons[current_weapon] == ninja_star:
+                        weapons[current_weapon].throw()
+                      
+                
+
+    #======================================================================Calculations======================================================================
+    ragdoll.run()
+    for curr_bullet in shoted_bullets:
+        curr_bullet.move()
+        if curr_bullet.is_collided_with(ragdoll):
+            if ragdoll.running:
+                    ragdoll.running = False
+    
+        
+    
+    
+    for throwable in throwable_summons:
+        if throwable.type == "star":
+            throwable.parabolic_fall()
+            if throwable.is_collided_with(ragdoll):
+                if not throwable.used:
+                    throwable.collidable = False
+                    hitted_ragdoll = HittedRagdoll(ragdoll.x,ragdoll.y,ragdoll.orientation,ragdoll.sprite_width,ragdoll.sprite_height)
+                    hitting = True
+                    ragdoll.dead = True
+                    throwable.used = True
+                    gui.points += 10
+            throwable.delete()
+        if throwable.type == "grenade":
+            throwable.fall()
+            throwable.explode()
+    
+    
+    weapons[current_weapon].drag()
+    weapons[current_weapon].check_orination()
+    
+    if hitting:
+        #if len(hurted) > 0: hurted[0].animation()
+        hitted_ragdoll.animation()
+        if weapons[current_weapon] == knife and weapons[current_weapon].swipping:
+            weapons[current_weapon].swipe()
+            
+    if weapons[current_weapon] == pistol:
+        pistol.looking_at()
+
+    
+    for explosion in explosions:
+        explosion.animation()
+        if explosion.is_collided_with(ragdoll) and explosion.img_id == 1:
+                ragdoll.dead = True
+                hitting = True
+                hitted_ragdoll = HittedRagdoll(ragdoll.x,ragdoll.y,ragdoll.orientation,ragdoll.sprite_width,ragdoll.sprite_height)
+                gui.points += int((30*99)/(ragdoll.diff-2))
+                
+    gui.get_score()
+    gui.get_fps_gui()
+    #========================================================================Renders======================================================================
+    background.render()
+    ragdoll.render()
+    weapons[current_weapon].render()
+
+    if hitting:
+        ragdoll.running = False
+        hitted_ragdoll.render()
+        
+    for curr_bullet in shoted_bullets:
+        curr_bullet.render()
+        if curr_bullet.is_collided_with(ragdoll):
+            curr_bullet.dead = True
+            shoted_bullets.remove(curr_bullet)
+            ragdoll.dead = True
+            hitting = True
+            hitted_ragdoll = HittedRagdoll(ragdoll.x,ragdoll.y,ragdoll.orientation,ragdoll.sprite_width,ragdoll.sprite_height)
+            curr_bullet.x, curr_bullet.y = width+100, height
+            gui.points += int((1*99)/(ragdoll.diff-2))
+
+        
+        
+    for throwable in throwable_summons:
+        throwable.render()
+
+    for explosion in explosions:
+        explosion.render()
+        
+    gui.render()
+    
+    ragdoll.running = True
+    
+    pygame.display.flip()
+    clock.tick(60)
+    
+#================================================================================splash_screen=======================================================================================
+
+
+def splash_screen():
+    frame = 1
+    frame_count = 20
+    done = False
+    reverse = False
+    prevmillis_splash = 0
+    frame_interval = 0.01e3
+    frames = []
+    frames = [pygame.image.load("Splash/splash_"+str(x)+".png") for x in range(1,frame_count+1)]
+    for i in range(0,len(frames)):
+        frames[i] = pygame.transform.scale(frames[i], (width,height))
+  
+    
+    while not done:
+        currmillis_splash = millis()
+        if currmillis_splash - prevmillis_splash > frame_interval:
+            prevmillis_splash = currmillis_splash
+            if frame > frame_count-1:
+                reverse = True
+
+
+            screen.blit(frames[frame-1], (0, 0))
+            pygame.display.flip()
+
+            if not reverse:  
+                frame+=1
+            else:
+                if frame > 6 and frame < 13:
+                    pass
+                
+                if frame > 1:
+                    frame-=1
+                
+                else:
+                    done = True
+            
+
+
+
+    
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+    
+    
+#================================================================================Loop=======================================================================================
+splash_screen()
+while not restart:
+    game()
