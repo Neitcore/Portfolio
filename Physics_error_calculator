@@ -1,0 +1,265 @@
+"""
+This script was made for physics errors calculations
+"""
+
+def t_beta(beta, n, printed = True):
+    """
+    Function that returns Student factor value.
+    Function arguments:
+
+        beta --> 0.70, 0.95 or 0.99
+        n --> Number of measurements done
+        printed --> True by default, set it to False, if you don't want to print result 
+    
+    """
+    table_of_beta_0_70 = {2:1.96,
+                          3:1.39,
+                          4:1.25,
+                          5:1.19,
+                          6:1.16,
+                          7:1.13,
+                          8:1.12,
+                          9:1.11,
+                          10:1.10,
+                          11:1.09,
+                          12:1.09,
+                          13:1.08,
+                          14:1.08,
+                          15:1.08,
+                          16:1.07,
+                          17:1.07,
+                          18:1.07,
+                          19:1.07,
+                          20:1.06,
+                          21:1.06,
+                          22:1.06,
+                          23:1.06,
+                          24:1.06,
+                          25:1.06,
+                          'inf':1.04
+                          }
+    table_of_beta_0_95 = {2:12.71,
+                          3:4.30,
+                          4:3.18,
+                          5:2.78,
+                          6:2.57,
+                          7:2.45,
+                          8:2.36,
+                          9:2.31,
+                          10:2.26,
+                          11:2.23,
+                          12:2.20,
+                          13:2.18,
+                          14:2.16,
+                          15:2.15,
+                          16:2.13,
+                          17:2.12,
+                          18:2.11,
+                          19:2.10,
+                          20:2.09,
+                          21:2.09,
+                          22:2.08,
+                          23:2.07,
+                          24:2.07,
+                          25:2.06,
+                          'inf':1.96
+                          }
+    table_of_beta_0_99 = {2:63.66,
+                          3:9.92,
+                          4:5.84,
+                          5:4.60,
+                          6:4.03,
+                          7:3.71,
+                          8:3.50,
+                          9:3.36,
+                          10:3.25,
+                          11:3.17,
+                          12:3.11,
+                          13:3.05,
+                          14:3.01,
+                          15:2.98,
+                          16:2.95,
+                          17:2.92,
+                          18:2.90,
+                          19:2.88,
+                          20:2.86,
+                          21:2.84,
+                          22:2.83,
+                          23:2.82,
+                          24:2.81,
+                          25:2.80,
+                          'inf':2.58
+                          }
+    if beta == 0.70:
+        if printed:
+            print("Student factor = "+str(table_of_beta_0_70[n]))
+        return table_of_beta_0_70[n]
+    elif beta == 0.95:
+        if printed:
+            print("Student factor = "+str(table_of_beta_0_95[n]))
+        return table_of_beta_0_95[n]
+    elif beta == 0.99:
+        if printed:
+            print("Student factor = "+str(table_of_beta_0_99[n]))
+        return table_of_beta_0_99[n]
+
+def avg(*args, printed = True):
+    """
+    Calculates the average value of arguments given
+    
+        Function arguments:
+
+            *args --> Your entered values
+            printed --> True by default, set it to False, if you don't want to print result 
+        
+    """
+    values = str(args).replace(")","").replace("(","").replace("[","").replace("]","").replace(",","").split()
+    for value in range(0,len(values)):
+        values[value] = float(values[value])
+        
+    avg_value = sum(values)/len(values)
+    if printed:
+        print("Average value = "+str(round(avg_value,3)))
+    return avg_value
+
+def standard_deviation(*args, printed = True):
+    """
+    Calculates standard deviation of entered values
+    
+        Function arguments:
+        
+            *args --> Your values for which you want to calculate standard deviation
+            printed --> True by default, set it to False, if you don't want to print result
+        
+    """
+    numerator = 0
+    
+    
+    values = str(args).replace(")","").replace("(","").replace("[","").replace("]","").replace(",","").split()
+    for value in range(0,len(values)):
+        values[value] = float(values[value])
+        
+    n = len(values)
+    
+    avg_value = avg(values, printed=False)
+    for step in range(0,n):
+        numerator+= (values[step] - avg_value)**2
+    denominator = n*(n-1)
+    std_dev = (numerator/denominator)**0.5
+    if printed:
+        print("Standard deviation = "+str(round(std_dev,3)))
+    return(std_dev)
+
+def case_absolute_error(std_dev, t_beta, printed = True):
+    """
+    Calculates case absolute error
+
+        Function arguments:
+            std_dev --> Standard_deviation
+            t_beta --> Student factor at count of taken data
+            prined --> True by default, set it to False, if you don't want to print result 
+
+        Formula:
+            ΔXs = Xs * tβ(n)
+
+    """
+    case_abs_err = std_dev*t_beta
+    if printed:
+        print("Case absolute error = "+str(round(case_abs_err,3)))
+    return case_abs_err
+
+def systematic_error(dValue, printed = True):
+    """
+    Calculates systematic error
+
+        Function arguments:
+            dValue --> Delta of measurement
+            prined --> True by default, set it to False, if you don't want to print result 
+    
+    """
+    sys_err = dValue/3*t_beta(0.95,'inf',printed = False)
+    if printed:
+        print("Systematic error = "+str(round(sys_err,10)))
+    return(sys_err)
+
+def absolute_error(cae, se, printed = True):
+    """
+    Calculates absolute error
+
+        Function arguments:
+            cae --> case absolute error
+            se --> systematic error
+            prined --> True by default, set it to False, if you don't want to print result
+        
+        Formula:
+            ∆xs >> ∆xδ => ∆x = ∆xs
+            ∆xs << ∆xδ => ∆x = ∆xδ
+            Values need to differ more than three times, if not:
+            ∆x = (∆xs^2+∆xδ^2)^0.5
+    
+    """
+
+    
+    relation1 = cae/se
+    relation2 = se/cae
+    
+    if relation1 >= 3:
+        print("Case absolute error > Systematic error", round(relation1,4), "times")
+        abs_err = cae
+    elif relation2 >=3:
+        print("Systematic error more then > Case absolute error", round(relation1,4), "times")
+        abs_err = se
+    else:
+        abs_err = (cae**2+se**2)**0.5
+    if printed:
+        print("Absolute error = " + str(round(abs_err,3)))
+    return abs_err
+
+def relative_error(abs_err,avg_value, printed = True):
+    """
+    Calculates relative error
+
+        Function arguments:
+            abs_err --> Absolute error
+            avg_value --> Average value
+            prined --> True by default, set it to False, if you don't want to print result 
+
+
+    
+    """
+    rel_err = abs_err/avg_value*100
+    if printed:
+        print("Relative error = ", str(round(rel_err,2)),"%")
+    return rel_err
+    
+def result(avg_value, abs_err, rel_err, rel_prob=0.95):
+    """
+    Prints your result in standart form
+
+    
+    """
+    print("Result = ("+str(round(avg_value,3))+" +- "+str(round(abs_err,3))+"), ϵ = "+str(round(rel_err,2))+"%"+", β = "+str(rel_prob))
+
+if __name__ == "__main__":
+
+    values = input("Enter your data: ").split()
+    dValue = float(values[-1])
+    values = values[:-1]
+    for value in range(0,len(values)):
+        values[value] = float(values[value])
+    
+    average_value = avg(values)
+    std_dev = standard_deviation(values)
+
+
+    t_beta_value = t_beta(0.95,len(values))
+    
+    case_abs_err = case_absolute_error(std_dev, t_beta_value)
+    sys_err = systematic_error(dValue)
+
+    abs_err = absolute_error(case_abs_err,sys_err)
+
+    rel_err = relative_error(abs_err,average_value)
+
+    result(average_value, abs_err, rel_err)
+
